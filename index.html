@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Konflikt '47 — Platoon Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Barlow:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-mark">K47</div>
+      <div>
+        <div class="logo-title">Platoon Builder</div>
+        <div class="logo-sub">Konflikt '47</div>
+        <div class="logo-tag">Build your force, no internet required</div>
+      </div>
+    </div>
+    <div class="pts-header-wrap">
+      <div class="pts-bar-outer">
+        <div class="pts-bar-label">Points Used</div>
+        <div class="pts-bar-track">
+          <div class="pts-bar-fill" id="ptsBar"></div>
+        </div>
+      </div>
+      <div class="pts-display">
+        <div class="pts-display-label">Total</div>
+        <div class="pts-display-val">
+          <span id="totalPts">0</span><span class="limit"> / <span id="ptsLimit">500</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- MOBILE TABS -->
+<nav class="mobile-tabs">
+  <button class="mobile-tab active" data-tab="config" onclick="switchTab('config')">
+    <span class="mobile-tab-icon">⚙</span>Config
+  </button>
+  <button class="mobile-tab" data-tab="browse" onclick="switchTab('browse')">
+    <span class="mobile-tab-icon">+</span>Add Units
+  </button>
+  <button class="mobile-tab" data-tab="roster" onclick="switchTab('roster')">
+    <span class="mobile-tab-icon">⚔</span>Roster
+  </button>
+</nav>
+
+<div class="app">
+
+  <!-- LEFT: Config -->
+  <div class="col-left" data-tab="config" style="display:flex;flex-direction:column;gap:14px;">
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Force Configuration</span>
+      </div>
+      <div class="panel-body">
+        <div class="form-row">
+          <label class="field-label">Force Name</label>
+          <input class="field-input" id="armyName" type="text" placeholder="Name your force...">
+        </div>
+        <div class="form-row">
+          <label class="field-label">Points Limit</label>
+          <select class="field-select" id="ptsLimitSelect">
+            <option value="500" selected>500 pts — Skirmish</option>
+            <option value="750">750 pts — Patrol</option>
+            <option value="1000">1,000 pts — Standard</option>
+            <option value="1250">1,250 pts — Reinforced</option>
+            <option value="1500">1,500 pts — Large</option>
+            <option value="2000">2,000 pts — Grand Battle</option>
+          </select>
+        </div>
+        <div class="divider"></div>
+        <label class="field-label">Faction</label>
+        <div class="faction-grid" id="factionGrid"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Validation</span>
+      </div>
+      <div class="panel-body">
+        <div id="validationList"><div class="valid-warn">⚠ No faction selected</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Export &amp; Print</span>
+      </div>
+      <div class="panel-body">
+        <div class="export-btns">
+          <button class="btn btn-primary" onclick="exportPDF()">Export PDF</button>
+          <button class="btn btn-outline" onclick="exportTxt()">Export TXT</button>
+          <button class="btn btn-danger"  onclick="clearRoster()">Clear Roster</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CENTRE: Unit Browser -->
+  <div class="col-browser" data-tab="browse" style="display:flex;flex-direction:column;gap:14px;">
+    <div class="panel" style="flex:1;">
+      <div class="panel-header">
+        <span class="panel-title">Unit Browser</span>
+        <span id="unitCount" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);">—</span>
+      </div>
+      <div class="panel-body">
+        <input class="search-input" id="unitSearch" type="text"
+          placeholder="Search units..." oninput="renderUnitBrowser()">
+        <div class="role-tabs" id="roleTabs"></div>
+        <div class="unit-list" id="unitList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Roster -->
+  <div class="col-roster" data-tab="roster">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Army Roster</span>
+        <span id="factionBadge" class="faction-badge">No Faction</span>
+      </div>
+      <div id="rosterBody">
+        <div class="empty-state">
+          <div class="empty-icon">⚔</div>
+          <div>No units added yet</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px;">
+            Choose a faction and add units from the browser ←
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FACTION CHANGE MODAL -->
+<div class="modal-overlay" id="factionModal">
+  <div class="modal-box">
+    <div class="modal-title">Change Faction</div>
+    <div class="modal-body">You have units in your roster.</div>
+    <div class="modal-sub">Switching faction will clear your current roster. This cannot be undone.</div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="cancelFactionChange()">← Back</button>
+      <button class="btn btn-danger"  onclick="confirmFactionChange()">Clear &amp; Switch</button>
+    </div>
+  </div>
+</div>
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- DATA -->
+<script src="data/factions.js"></script>
+<script src="data/factions/british.js"></script>
+<script src="data/factions/german.js"></script>
+<script src="data/factions/soviet.js"></script>
+<script src="data/factions/american.js"></script>
+<script src="data/factions/japanese.js"></script>
+<script src="data/faction_map.js"></script>
+<script src="data/weapons.js"></script>
+
+<!-- APP -->
+<script src="js/app.js"></script>
+<script src="js/pdf_export.js"></script>
+
+<footer class="app-footer">
+  <p>A fan-made Konflikt '47 platoon builder. Not affiliated with Osprey Publishing or Warlord Games.</p>
+  <p><em>Fill in your faction data files from the official PDFs to complete the unit roster.</em></p>
+</footer>
+
+</body>
+</html>
