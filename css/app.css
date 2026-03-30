@@ -466,11 +466,25 @@ header {
 .entry-options { margin-bottom: 6px; }
 .opt-row {
   display: flex; align-items: center; gap: 7px;
-  padding: 3px 0; cursor: pointer;
+  padding: 3px 0;
 }
-.opt-row input[type=checkbox] { accent-color: var(--accent); cursor: pointer; }
+.opt-step {
+  width: 22px; height: 22px;
+  background: var(--panel); border: 1px solid var(--border);
+  color: var(--text); border-radius: 3px;
+  font-size: 14px; line-height: 1; cursor: pointer;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.opt-step:hover:not(:disabled) { background: var(--accent); color: #000; border-color: var(--accent); }
+.opt-step:disabled { opacity: 0.3; cursor: default; }
+.opt-count {
+  min-width: 18px; text-align: center;
+  font-size: 13px; font-weight: 700; color: var(--text);
+  flex-shrink: 0;
+}
 .opt-label { font-size: 12px; color: var(--text); flex: 1; }
-.opt-pts { font-size: 11px; color: var(--accent); font-family: 'Barlow Condensed', sans-serif; font-weight: 700; }
+.opt-pts { font-size: 11px; color: var(--accent); font-family: 'Barlow Condensed', sans-serif; font-weight: 700; white-space: nowrap; }
 
 /* notes */
 .notes-input {

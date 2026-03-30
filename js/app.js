@@ -353,9 +353,18 @@ function renderRoster() {
         : '';
 
       const optHtml = unit.options && unit.options.length
-        ? '<div class="entry-options">' + unit.options.map((opt, oi) =>
-            '<label class="opt-row"><input type="checkbox" ' + (entry.selectedOptions && entry.selectedOptions[opt.label] ? 'checked' : '') + ' onchange="toggleOption(' + idx + ', ' + oi + ', this.checked)"><span class="opt-label">' + opt.label + '</span><span class="opt-pts">' + (opt.pts >= 0 ? '+' : '') + opt.pts + ' pts</span></label>'
-          ).join('') + '</div>'
+        ? '<div class="entry-options">' + unit.options.map((opt, oi) => {
+            const cur = (entry.selectedOptions && entry.selectedOptions[opt.label]) || 0;
+            const maxV = opt.max || 1;
+            const ptsLabel = (opt.pts >= 0 ? '+' : '') + opt.pts + ' pts' + (maxV > 1 ? ' each' : '');
+            return '<div class="opt-row">' +
+              '<button class="opt-step" id="ominus-' + idx + '-' + oi + '" onclick="stepOption(' + idx + ',' + oi + ',-1)"' + (cur <= 0 ? ' disabled' : '') + '>−</button>' +
+              '<span class="opt-count" id="ocount-' + idx + '-' + oi + '">' + cur + '</span>' +
+              '<button class="opt-step" id="oplus-' + idx + '-' + oi + '" onclick="stepOption(' + idx + ',' + oi + ',1)"' + (cur >= maxV ? ' disabled' : '') + '>+</button>' +
+              '<span class="opt-label">' + opt.label + '</span>' +
+              '<span class="opt-pts">' + ptsLabel + '</span>' +
+            '</div>';
+          }).join('') + '</div>'
         : '';
 
       const riftNote = unit.riftUnit ? '<div class="rift-note-entry">⚡ ' + unit.riftUnit + '</div>' : '';
@@ -372,19 +381,28 @@ function renderRoster() {
   }).join('');
 }
 
-function toggleOption(entryIdx, optIdx, checked) {
+function stepOption(entryIdx, optIdx, delta) {
   const entry = state.roster[entryIdx];
   const unit  = findUnit(entry.unitId);
   if (!unit) return;
   const opt = unit.options[optIdx];
   if (!entry.selectedOptions) entry.selectedOptions = {};
-  entry.selectedOptions[opt.label] = checked;
-  // recalculate total optionPts
+  const cur = entry.selectedOptions[opt.label] || 0;
+  const next = Math.max(0, Math.min(opt.max || 1, cur + delta));
+  entry.selectedOptions[opt.label] = next;
+  // recalculate optionPts using counts
   entry.optionPts = unit.options.reduce((s, o) => {
-    return entry.selectedOptions[o.label] ? s + o.pts : s;
+    return s + (entry.selectedOptions[o.label] || 0) * o.pts;
   }, 0);
+  // re-render just this entry's option row so stepper reflects new count
+  const countEl = document.getElementById('ocount-' + entryIdx + '-' + optIdx);
+  if (countEl) countEl.textContent = next;
+  const minusBtn = document.getElementById('ominus-' + entryIdx + '-' + optIdx);
+  const plusBtn  = document.getElementById('oplus-'  + entryIdx + '-' + optIdx);
+  if (minusBtn) minusBtn.disabled = next <= 0;
+  if (plusBtn)  plusBtn.disabled  = next >= (opt.max || 1);
   updateTotalPoints();
-  const el = document.getElementById(`epts-${entryIdx}`);
+  const el = document.getElementById('epts-' + entryIdx);
   if (el) el.textContent = calcEntryTotal(entry) + ' pts';
 }
 
@@ -450,7 +468,8 @@ function exportTxt() {
     out += ` — ${total} pts\n`;
     if (entry.selectedOptions) {
       unit.options && unit.options.forEach(opt => {
-        if (entry.selectedOptions[opt.label]) out += `  + ${opt.label}\n`;
+        const cnt = entry.selectedOptions[opt.label] || 0;
+        if (cnt > 0) out += '  + ' + (cnt > 1 ? cnt + 'x ' : '') + opt.label + '\n';
       });
     }
     if (entry.notes) out += `  Notes: ${entry.notes}\n`;
