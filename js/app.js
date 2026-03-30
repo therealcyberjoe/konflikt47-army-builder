@@ -49,6 +49,7 @@ function init() {
 
   document.getElementById('armyName').addEventListener('input', e => {
     state.armyName = e.target.value;
+    renderValidation();
   });
   document.getElementById('ptsLimitSelect').addEventListener('change', e => {
     state.ptsLimit = parseInt(e.target.value);
