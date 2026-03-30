@@ -268,6 +268,36 @@ header {
 .unit-list::-webkit-scrollbar-track { background: transparent; }
 .unit-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
+
+/* ── section headers ── */
+.browser-section { margin-bottom: 4px; }
+.browser-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px 5px;
+  margin: 6px 0 2px;
+  border-bottom: 1px solid var(--border);
+}
+.browser-section-count {
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: auto;
+}
+.roster-section { margin-bottom: 2px; }
+.roster-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 5px;
+  margin: 8px 0 2px;
+  border-bottom: 1px solid var(--border);
+}
+.roster-section-pts {
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: auto;
+}
 .unit-card {
   background: var(--panel2);
   border: 1px solid var(--border);

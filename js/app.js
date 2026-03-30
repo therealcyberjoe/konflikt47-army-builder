@@ -196,52 +196,66 @@ function renderUnitBrowser() {
     return;
   }
 
-  const roleOrder = ['Officer','Infantry','Artillery','Armour','Walker','Air Support','Transport'];
+  const roleOrder = ['Officer','Infantry','Artillery','Walker','Armour','Air Support','Transport'];
   filtered.sort((a, b) => {
     const ri = roleOrder.indexOf(a.role) - roleOrder.indexOf(b.role);
     return ri !== 0 ? ri : a.name.localeCompare(b.name);
   });
 
-  list.innerHTML = filtered.map(unit => {
-    const tiers   = availableTiers(unit);
-    const defExp  = unit.defaultExp || tiers[0] || 'Regular';
-    const basePts = getUnitPts(unit, defExp);
-    const ppmVal  = getPpm(unit, defExp);
-    const dam     = getDamage(unit, defExp);
-    const mor     = getMorale(unit, defExp);
-    const expCls  = defExp.toLowerCase();
+  // Group by role and render with section headers
+  const groups = [];
+  let currentRole = null;
+  filtered.forEach(unit => {
+    if (unit.role !== currentRole) {
+      currentRole = unit.role;
+      groups.push({ role: currentRole, units: [] });
+    }
+    groups[groups.length - 1].units.push(unit);
+  });
 
-    const tierBtns = tiers.map(t => `
-      <span class="tier-badge tier-${t.toLowerCase()}">${t.charAt(0)}</span>
-    `).join('');
+  list.innerHTML = groups.map(group => {
+    const cards = group.units.map(unit => {
+      const tiers   = availableTiers(unit);
+      const defExp  = unit.defaultExp || tiers[0] || 'Regular';
+      const basePts = getUnitPts(unit, defExp);
+      const ppmVal  = getPpm(unit, defExp);
+      const dam     = getDamage(unit, defExp);
+      const mor     = getMorale(unit, defExp);
 
-    return `
-      <div class="unit-card">
-        <div class="unit-card-top">
-          <div class="unit-card-name">${unit.name}</div>
-          <div class="unit-card-meta">
-            <span class="role-badge role-${unit.role.toLowerCase().replace(/\s+/g,'-')}">${unit.role}</span>
-            ${tierBtns}
-          </div>
-        </div>
-        <div class="unit-stats-row">
-          <span class="stat"><span class="stat-label">Mv</span><span class="stat-val">${unit.move || '6"'}</span></span>
-          <span class="stat"><span class="stat-label">Dmg</span><span class="stat-val">${dam}</span></span>
-          <span class="stat"><span class="stat-label">Mor</span><span class="stat-val">${mor}</span></span>
-          ${unit.minModels && unit.maxModels && unit.minModels !== unit.maxModels
-            ? `<span class="stat"><span class="stat-label">Size</span><span class="stat-val">${unit.minModels}–${unit.maxModels}</span></span>`
-            : (unit.composition ? `<span class="stat stat-comp"><span class="stat-label">Comp</span><span class="stat-val">${unit.composition}</span></span>` : '')}
-        </div>
-        ${unit.special && unit.special.length
-          ? `<div class="unit-special">${unit.special.map(s=>`<span>${s}</span>`).join('')}</div>` : ''}
-        ${unit.riftUnit
-          ? `<div class="rift-note">⚡ ${unit.riftUnit}</div>` : ''}
-        <div class="unit-card-bottom">
-          <span class="unit-pts">${basePts !== null ? basePts + ' pts' : '—'}${ppmVal ? ` +${ppmVal}/model` : ''}</span>
-          <button class="add-btn" onclick="addUnit('${unit.id}')">+ Add</button>
-        </div>
-      </div>
-    `;
+      const tierBtns = tiers.map(t =>
+        '<span class="tier-badge tier-' + t.toLowerCase() + '">' + t.charAt(0) + '</span>'
+      ).join('');
+
+      return '<div class="unit-card">' +
+        '<div class="unit-card-top">' +
+          '<div class="unit-card-name">' + unit.name + '</div>' +
+          '<div class="unit-card-meta">' + tierBtns + '</div>' +
+        '</div>' +
+        '<div class="unit-stats-row">' +
+          '<span class="stat"><span class="stat-label">Mv</span><span class="stat-val">' + (unit.move || '6"') + '</span></span>' +
+          '<span class="stat"><span class="stat-label">Dmg</span><span class="stat-val">' + dam + '</span></span>' +
+          '<span class="stat"><span class="stat-label">Mor</span><span class="stat-val">' + mor + '</span></span>' +
+          (unit.minModels && unit.maxModels && unit.minModels !== unit.maxModels
+            ? '<span class="stat"><span class="stat-label">Size</span><span class="stat-val">' + unit.minModels + '–' + unit.maxModels + '</span></span>'
+            : (unit.composition ? '<span class="stat stat-comp"><span class="stat-label">Comp</span><span class="stat-val">' + unit.composition + '</span></span>' : '')) +
+        '</div>' +
+        (unit.special && unit.special.length
+          ? '<div class="unit-special">' + unit.special.map(s => '<span>' + s + '</span>').join('') + '</div>' : '') +
+        (unit.riftUnit ? '<div class="rift-note">⚡ ' + unit.riftUnit + '</div>' : '') +
+        '<div class="unit-card-bottom">' +
+          '<span class="unit-pts">' + (basePts !== null ? basePts + ' pts' : '—') + (ppmVal ? ' +' + ppmVal + '/model' : '') + '</span>' +
+          '<button class="add-btn" onclick="addUnit(\'' + unit.id + '\')">+ Add</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="browser-section">' +
+      '<div class="browser-section-header">' +
+        '<span class="role-badge role-' + group.role.toLowerCase().replace(/\s+/g, '-') + '">' + group.role + '</span>' +
+        '<span class="browser-section-count">' + group.units.length + '</span>' +
+      '</div>' +
+      cards +
+      '</div>';
   }).join('');
 }
 
@@ -306,75 +320,55 @@ function renderRoster() {
     return;
   }
 
-  body.innerHTML = state.roster.map((entry, idx) => {
-    const unit = findUnit(entry.unitId);
-    if (!unit) return '';
+  const roleOrder = ['Officer','Infantry','Artillery','Walker','Armour','Air Support','Transport'];
+  const indexed = state.roster.map((entry, idx) => ({ entry, idx }));
+  indexed.sort((a, b) => roleOrder.indexOf(a.entry.role) - roleOrder.indexOf(b.entry.role));
 
-    const tiers   = availableTiers(unit);
-    const total   = calcEntryTotal(entry);
-    const ppmVal  = getPpm(unit, entry.exp);
-    const maxM    = unit.maxModels || 1;
-    const minM    = unit.minModels || 1;
+  const rGroups = [];
+  let curRole = null;
+  indexed.forEach(({ entry, idx }) => {
+    if (entry.role !== curRole) { curRole = entry.role; rGroups.push({ role: curRole, items: [] }); }
+    rGroups[rGroups.length - 1].items.push({ entry, idx });
+  });
 
-    // experience selector buttons
-    const expBtns = tiers.length > 1
-      ? `<div class="exp-selector">${tiers.map(t => `
-          <button class="exp-btn ${entry.exp === t ? 'active' : ''}"
-            onclick="setEntryExp(${idx}, '${t}')">${t}</button>
-        `).join('')}</div>`
-      : `<span class="exp-badge exp-${entry.exp.toLowerCase()}">${entry.exp}</span>`;
+  body.innerHTML = rGroups.map(group => {
+    const groupPts = group.items.reduce((s, { entry }) => s + calcEntryTotal(entry), 0);
+    const entries = group.items.map(({ entry, idx }) => {
+      const unit = findUnit(entry.unitId);
+      if (!unit) return '';
+      const tiers  = availableTiers(unit);
+      const total  = calcEntryTotal(entry);
+      const ppmVal = getPpm(unit, entry.exp);
+      const maxM   = unit.maxModels || 1;
+      const minM   = unit.minModels || 1;
 
-    // model count slider
-    const modelSlider = maxM > minM && ppmVal ? `
-      <div class="model-slider-wrap">
-        <label class="field-label-sm">Models: <strong id="mc-${idx}">${entry.modelCount || minM}</strong></label>
-        <input type="range" class="model-slider"
-          min="${minM}" max="${maxM}" value="${entry.modelCount || minM}"
-          oninput="setModels(${idx}, this.value)">
-        <span class="model-range-hint">${minM}–${maxM} models · +${ppmVal} pts each</span>
-      </div>
-    ` : '';
+      const expBtns = tiers.length > 1
+        ? '<div class="exp-selector">' + tiers.map(t =>
+            '<button class="exp-btn ' + (entry.exp === t ? 'active' : '') + '" onclick="setEntryExp(' + idx + ', \'' + t + '\')">' + t + '</button>'
+          ).join('') + '</div>'
+        : '<span class="exp-badge exp-' + entry.exp.toLowerCase() + '">' + entry.exp + '</span>';
 
-    // options
-    const optHtml = unit.options && unit.options.length
-      ? `<div class="entry-options">${unit.options.map((opt, oi) => `
-          <label class="opt-row">
-            <input type="checkbox"
-              ${entry.selectedOptions && entry.selectedOptions[opt.label] ? 'checked' : ''}
-              onchange="toggleOption(${idx}, ${oi}, this.checked)">
-            <span class="opt-label">${opt.label}</span>
-            <span class="opt-pts">${opt.pts >= 0 ? '+' : ''}${opt.pts} pts</span>
-          </label>
-        `).join('')}</div>`
-      : '';
+      const modelSlider = maxM > minM && ppmVal
+        ? '<div class="model-slider-wrap"><label class="field-label-sm">Models: <strong id="mc-' + idx + '">' + (entry.modelCount || minM) + '</strong></label><input type="range" class="model-slider" min="' + minM + '" max="' + maxM + '" value="' + (entry.modelCount || minM) + '" oninput="setModels(' + idx + ', this.value)"><span class="model-range-hint">' + minM + '–' + maxM + ' models · +' + ppmVal + ' pts each</span></div>'
+        : '';
 
-    // rift note
-    const riftNote = unit.riftUnit
-      ? `<div class="rift-note-entry">⚡ ${unit.riftUnit}</div>` : '';
+      const optHtml = unit.options && unit.options.length
+        ? '<div class="entry-options">' + unit.options.map((opt, oi) =>
+            '<label class="opt-row"><input type="checkbox" ' + (entry.selectedOptions && entry.selectedOptions[opt.label] ? 'checked' : '') + ' onchange="toggleOption(' + idx + ', ' + oi + ', this.checked)"><span class="opt-label">' + opt.label + '</span><span class="opt-pts">' + (opt.pts >= 0 ? '+' : '') + opt.pts + ' pts</span></label>'
+          ).join('') + '</div>'
+        : '';
 
-    return `
-      <div class="roster-entry" data-idx="${idx}">
-        <div class="entry-header">
-          <div class="entry-name">${entry.name}</div>
-          <div class="entry-right">
-            <span class="entry-pts" id="epts-${idx}">${total} pts</span>
-            <button class="remove-btn" onclick="removeEntry(${idx})" title="Remove">✕</button>
-          </div>
-        </div>
-        <div class="entry-role-row">
-          <span class="role-badge role-${unit.role.toLowerCase().replace(/\s+/g,'-')}">${unit.role}</span>
-          ${expBtns}
-        </div>
-        ${riftNote}
-        ${modelSlider}
-        ${optHtml}
-        <div class="entry-notes-wrap">
-          <input type="text" class="notes-input" placeholder="Notes..."
-            value="${entry.notes || ''}"
-            oninput="setNotes(${idx}, this.value)">
-        </div>
-      </div>
-    `;
+      const riftNote = unit.riftUnit ? '<div class="rift-note-entry">⚡ ' + unit.riftUnit + '</div>' : '';
+
+      return '<div class="roster-entry" data-idx="' + idx + '">' +
+        '<div class="entry-header"><div class="entry-name">' + entry.name + '</div><div class="entry-right"><span class="entry-pts" id="epts-' + idx + '">' + total + ' pts</span><button class="remove-btn" onclick="removeEntry(' + idx + ')" title="Remove">✕</button></div></div>' +
+        '<div class="entry-role-row">' + expBtns + '</div>' +
+        riftNote + modelSlider + optHtml +
+        '<div class="entry-notes-wrap"><input type="text" class="notes-input" placeholder="Notes..." value="' + (entry.notes || '').replace(/"/g, '&quot;') + '" oninput="setNotes(' + idx + ', this.value)"></div>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="roster-section"><div class="roster-section-header"><span class="role-badge role-' + group.role.toLowerCase().replace(/\s+/g, '-') + '">' + group.role + '</span><span class="roster-section-pts">' + groupPts + ' pts</span></div>' + entries + '</div>';
   }).join('');
 }
 
